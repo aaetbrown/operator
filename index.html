@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Be the Grid Operator</title>
+<style>
+  :root {
+    --bg: #fbf8ef;
+    --card: #ffffff;
+    --ink: #1f2a33;
+    --muted: #55626d;
+    --line: #cdd5db;
+    --navy: #304852;
+    --gold: #e8a91c;
+    --good: #1c7a4a;
+    --bad: #b3261e;
+    --warn: #8a5a00;
+    --focus: #1a5fd0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #172026;
+      --card: #20303a;
+      --ink: #eef2f4;
+      --muted: #b4c0c8;
+      --line: #3a4d59;
+      --navy: #9fc3d1;
+      --gold: #f0b93a;
+      --good: #6fd09b;
+      --bad: #ff8f86;
+      --warn: #f0c36a;
+      --focus: #8db8ff;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.45;
+  }
+  a, button, input { font: inherit; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  header { background: var(--navy); color: #fff; padding: 16px 20px; }
+  @media (prefers-color-scheme: dark) { header { background: #0f171c; } }
+  header h1 { margin: 0; font-size: 1.6rem; }
+  header p { margin: 4px 0 0; opacity: .9; }
+  main { max-width: 1100px; margin: 0 auto; padding: 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
+  .card h2 { margin: 0 0 6px; font-size: 1.15rem; }
+  details.how summary { cursor: pointer; font-weight: 700; }
+  details.how ul { margin: 8px 0 0 20px; padding: 0; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .tab { border: 2px solid var(--line); background: var(--card); color: var(--ink); border-radius: 10px; padding: 8px 12px; cursor: pointer; font-weight: 600; }
+  .tab[aria-current="true"] { border-color: var(--navy); background: var(--navy); color: #fff; }
+  @media (prefers-color-scheme: dark) { .tab[aria-current="true"] { color: #0f171c; } }
+  .layout { display: grid; grid-template-columns: 1fr 360px; gap: 16px; align-items: start; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+  .level-head h2 { font-size: 1.35rem; }
+  .story { color: var(--muted); margin: 0; }
+  .plant { display: grid; grid-template-columns: 22px 1.4fr 1.6fr 96px 64px; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+  .plant:first-of-type { border-top: 0; }
+  .swatch { width: 18px; height: 18px; border-radius: 4px; border: 1px solid rgba(0,0,0,.3); }
+  .pname { font-weight: 700; }
+  .pmeta { font-size: .85rem; color: var(--muted); }
+  .plant input[type="range"] { width: 100%; }
+  .plant input[type="number"] { width: 96px; padding: 6px; border: 2px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); }
+  .btn { border: 2px solid var(--navy); background: var(--navy); color: #fff; border-radius: 10px; padding: 9px 14px; cursor: pointer; font-weight: 700; }
+  @media (prefers-color-scheme: dark) { .btn { color: #0f171c; } }
+  .btn.secondary { background: transparent; color: var(--navy); }
+  .btn.small { padding: 4px 8px; font-size: .85rem; }
+  .btn[disabled] { opacity: .5; cursor: not-allowed; }
+  .plant.off { opacity: .55; }
+  @media (max-width: 620px) {
+    .plant { grid-template-columns: 22px 1fr 96px 64px; }
+    .plant > :nth-child(3) { grid-column: 1 / -1; order: 6; }
+  }
+
+  .panel { position: sticky; top: 8px; }
+  .stat { display: flex; justify-content: space-between; padding: 4px 0; }
+  .stat strong { font-variant-numeric: tabular-nums; }
+  .status { font-weight: 800; padding: 8px 10px; border-radius: 8px; margin: 8px 0; border: 2px solid var(--line); }
+  .status.ok { border-color: var(--good); color: var(--good); }
+  .status.low { border-color: var(--bad); color: var(--bad); }
+  .status.high { border-color: var(--warn); color: var(--warn); }
+  .bar { position: relative; height: 34px; border: 2px solid var(--line); border-radius: 8px; background: repeating-linear-gradient(45deg, transparent 0 8px, rgba(128,128,128,.08) 8px 16px); display: flex; overflow: hidden; margin: 10px 0 4px; }
+  .seg { height: 100%; }
+  .demand-mark { position: absolute; top: -4px; bottom: -4px; width: 4px; background: var(--ink); }
+  .barlabel { display: flex; justify-content: space-between; font-size: .8rem; color: var(--muted); }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .8rem; margin-top: 8px; }
+  .legend span { display: inline-flex; align-items: center; gap: 4px; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(0,0,0,.3); }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .result { border-left: 6px solid var(--good); }
+  .result.warn { border-left-color: var(--warn); }
+  .result.bad { border-left-color: var(--bad); }
+  table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  .noprint { }
+  .printonly { display: none; }
+  .hidden { display: none !important; }
+  .emerg { border: 2px dashed var(--warn); }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 0; }
+  footer { max-width: 1100px; margin: 0 auto; padding: 8px 16px 28px; color: var(--muted); font-size: .85rem; }
+  @media print {
+    body { background: #fff; color: #000; }
+    header, .tabs, #how, #play, #resultcard, footer, .noprint { display: none !important; }
+    .printonly { display: block !important; }
+    #summary { display: block !important; border: 0; }
+    th, td { border-bottom: 1px solid #000; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Be the Grid Operator</h1>
+  <p>Keep the lights on for a region, one power plant at a time.</p>
+</header>
+
+<main>
+  <div class="card" id="how">
+    <details class="how" open>
+      <summary>How to play</summary>
+      <ul>
+        <li>Real grid operators make sure the electricity being made (<strong>supply</strong>) matches the electricity being used (<strong>demand</strong>) at every moment.</li>
+        <li>For each time of day, set how many megawatts (MW) each power plant makes. Your supply must <strong>equal</strong> the demand.</li>
+        <li>Turn on the <strong>cheapest</strong> plants first. Fill a plant up before you move to the next one.</li>
+        <li>The <strong>price</strong> is the cost of the most expensive plant you had to use.</li>
+        <li>Press <strong>Check my grid</strong> when you think you are done. You can change your answer and check again.</li>
+      </ul>
+    </details>
+  </div>
+
+  <div class="tabs" id="tabs" role="navigation" aria-label="Levels"></div>
+
+  <div id="play">
+    <div class="layout">
+      <section>
+        <div class="card level-head">
+          <h2 id="levelTitle"></h2>
+          <p class="story" id="levelStory"></p>
+        </div>
+        <div class="card" id="plants" aria-label="Power plants"></div>
+        <div class="card emerg hidden" id="emerg">
+          <h2>Emergency actions</h2>
+          <p class="story">When there is not enough supply, operators have a few more tools. Use them wisely.</p>
+          <div class="row">
+            <label for="imports"><strong>Bring in power from other regions</strong> <span class="pmeta">(up to 1,000 MW, $150 per MWh)</span></label>
+            <input type="range" id="imports" min="0" max="1000" step="100" value="0" aria-label="Imports in megawatts">
+            <input type="number" id="importsNum" min="0" max="1000" step="100" value="0" aria-label="Imports number" style="width:96px;padding:6px;">
+          </div>
+          <div class="row">
+            <label><input type="checkbox" id="conserve"> <strong>Ask customers to use less</strong> <span class="pmeta">(lowers demand by 1,000 MW)</span></label>
+          </div>
+          <div class="row">
+            <label for="shed"><strong>Cut power to some customers</strong> <span class="pmeta">(last resort: rotating outages)</span></label>
+            <input type="range" id="shed" min="0" max="6000" step="100" value="0" aria-label="Load shed in megawatts">
+            <input type="number" id="shedNum" min="0" max="6000" step="100" value="0" aria-label="Load shed number" style="width:96px;padding:6px;">
+          </div>
+        </div>
+      </section>
+
+      <aside class="card panel" aria-label="Grid balance">
+        <h2>Your grid</h2>
+        <div class="stat"><span>Demand</span><strong id="sDemand"></strong></div>
+        <div class="stat"><span>Your supply</span><strong id="sSupply"></strong></div>
+        <div class="stat"><span>Difference</span><strong id="sDiff"></strong></div>
+        <div id="status" class="status low" role="status" aria-live="polite"></div>
+        <div class="bar" id="bar" aria-hidden="true"><div class="demand-mark" id="dmark"></div></div>
+        <div class="barlabel" aria-hidden="true"><span>0 MW</span><span id="barMax"></span></div>
+        <div class="legend" id="legend" aria-hidden="true"></div>
+        <div class="stat" style="margin-top:10px;"><span>Price right now</span><strong id="sPrice"></strong></div>
+        <div class="stat"><span>Cost per hour</span><strong id="sCost"></strong></div>
+        <div class="actions">
+          <button class="btn" id="check">Check my grid</button>
+          <button class="btn secondary" id="reset">Reset</button>
+          <button class="btn secondary hidden" id="solve">Show answer (teacher)</button>
+        </div>
+      </aside>
+    </div>
+
+    <div class="card result hidden" id="resultcard" aria-live="polite">
+      <h2 id="resTitle"></h2>
+      <div id="resBody"></div>
+      <div class="actions"><button class="btn hidden" id="next">Next level</button></div>
+    </div>
+  </div>
+
+  <div class="card hidden" id="summary">
+    <h2>Your results</h2>
+    <p class="printonly">Name: ______________________________ &nbsp; Block: ________ &nbsp; Date: ______________</p>
+    <table id="sumTable"></table>
+    <p id="sumNote" style="margin-top:10px;"></p>
+    <div class="actions noprint"><button class="btn" id="print">Print my results</button><button class="btn secondary" id="again">Play again</button></div>
+  </div>
+</main>
+
+<footer>
+  The plants and costs in this game are made up. The demand numbers follow the shape of a real New England day from ISO New England's forecast. Nothing you type is saved or sent anywhere.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var PLANTS = [
+    { id: "wind", name: "Wind", cost: 5, color: "#1D9E75" },
+    { id: "solar", name: "Solar", cost: 5, color: "#EF9F27" },
+    { id: "nuclear", name: "Nuclear", cost: 10, color: "#7F77DD" },
+    { id: "hydro", name: "Hydro", cost: 15, color: "#378ADD" },
+    { id: "gas1", name: "Natural gas plant 1", cost: 30, color: "#D85A30" },
+    { id: "gas2", name: "Natural gas plant 2", cost: 38, color: "#993C1D" },
+    { id: "battery", name: "Battery storage", cost: 60, color: "#639922" },
+    { id: "oil", name: "Oil plant", cost: 120, color: "#5F5E5A" }
+  ];
+  var IMPORT = { id: "imports", name: "Imports", cost: 150, color: "#D4537E", max: 1000 };
+
+  var LEVELS = [
+    { label: "3 AM", demand: 9800, story: "It is the middle of the night. Most people are asleep.",
+      avail: { wind: 2000, solar: 0, nuclear: 3300, hydro: 700, gas1: 3500, gas2: 3500, battery: 0, oil: 2000 } },
+    { label: "7 AM", demand: 13200, story: "People are waking up and turning on lights, ovens, and heaters.",
+      avail: { wind: 1000, solar: 400, nuclear: 3300, hydro: 700, gas1: 3500, gas2: 3500, battery: 0, oil: 2000 } },
+    { label: "1 PM", demand: 8700, story: "The sun is high. Solar is making a lot of power.",
+      avail: { wind: 500, solar: 2200, nuclear: 3300, hydro: 700, gas1: 3500, gas2: 3500, battery: 0, oil: 2000 } },
+    { label: "6 PM", demand: 14000, story: "Everyone is home and cooking. The sun is setting, and the battery has stored energy from the day.",
+      avail: { wind: 1500, solar: 200, nuclear: 3300, hydro: 700, gas1: 3500, gas2: 3500, battery: 800, oil: 2000 } },
+    { label: "Cold snap, 6 PM", demand: 16000, emergency: true,
+      story: "It is a freezing evening, and everyone turned up the heat. Demand jumps to 16,000 MW. At the same time, Natural gas plant 2 goes offline. Can you keep the lights on?",
+      avail: { wind: 1500, solar: 200, nuclear: 3300, hydro: 700, gas1: 3500, gas2: 0, battery: 800, oil: 2000 } }
+  ];
+  var CONSERVE_MW = 1000;
+  var teacher = /[?&]teacher=1/.test(location.search);
+
+  var state, els = {};
+
+  function fmt(n) { return Number(n).toLocaleString("en-US"); }
+  function money(n) { return "$" + fmt(Math.round(n)); }
+  function $(id) { return document.getElementById(id); }
+
+  function freshState() {
+    var vals = [];
+    LEVELS.forEach(function () {
+      var v = { imports: 0, conserve: false, shed: 0 };
+      PLANTS.forEach(function (p) { v[p.id] = 0; });
+      vals.push(v);
+    });
+    return { level: 0, vals: vals, results: [] };
+  }
+
+  /* ---------- math ---------- */
+  function totals(levelIdx) {
+    var L = LEVELS[levelIdx], v = state.vals[levelIdx];
+    var supply = 0, cost = 0, price = 0;
+    PLANTS.forEach(function (p) {
+      var mw = v[p.id];
+      supply += mw; cost += mw * p.cost;
+      if (mw > 0 && p.cost > price) price = p.cost;
+    });
+    if (v.imports > 0) { supply += v.imports; cost += v.imports * IMPORT.cost; if (IMPORT.cost > price) price = IMPORT.cost; }
+    var demand = L.demand - (v.conserve ? CONSERVE_MW : 0) - v.shed;
+    return { supply: supply, cost: cost, price: price, demand: demand, diff: supply - demand };
+  }
+
+  function optimal(levelIdx) {
+    var L = LEVELS[levelIdx];
+    if (L.emergency) {
+      var sup = 0, cost = 0, price = 0, plan = {};
+      PLANTS.forEach(function (p) {
+        var mw = L.avail[p.id]; plan[p.id] = mw; sup += mw; cost += mw * p.cost;
+        if (mw > 0 && p.cost > price) price = p.cost;
+      });
+      plan.imports = IMPORT.max; sup += IMPORT.max; cost += IMPORT.max * IMPORT.cost; price = Math.max(price, IMPORT.cost);
+      plan.conserve = true;
+      var effective = L.demand - CONSERVE_MW;
+      plan.shed = Math.max(0, effective - sup);
+      return { plan: plan, cost: cost, price: price, shed: plan.shed };
+    }
+    var rem = L.demand, c = 0, pr = 0, pl = {};
+    PLANTS.slice().sort(function (a, b) { return a.cost - b.cost; }).forEach(function (p) {
+      var mw = Math.min(L.avail[p.id], rem); pl[p.id] = mw; rem -= mw; c += mw * p.cost;
+      if (mw > 0) pr = Math.max(pr, p.cost);
+    });
+    pl.imports = 0; pl.conserve = false; pl.shed = 0;
+    return { plan: pl, cost: c, price: pr, shed: 0 };
+  }
+
+  /* ---------- rendering ---------- */
+  function buildTabs() {
+    els.tabs.innerHTML = "";
+    LEVELS.forEach(function (L, i) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "tab";
+      var done = state.results[i] ? " \u2713" : "";
+      b.textContent = (i + 1) + ". " + L.label + done;
+      if (i === state.level) b.setAttribute("aria-current", "true");
+      b.addEventListener("click", function () { goLevel(i); });
+      els.tabs.appendChild(b);
+    });
+  }
+
+  function buildLegend() {
+    var html = "";
+    PLANTS.forEach(function (p) { html += '<span><i style="background:' + p.color + '"></i>' + p.name + "</span>"; });
+    html += '<span><i style="background:' + IMPORT.color + '"></i>Imports</span>';
+    els.legend.innerHTML = html;
+  }
+
+  function buildPlants() {
+    var L = LEVELS[state.level], v = state.vals[state.level];
+    els.plants.innerHTML = "";
+    PLANTS.forEach(function (p) {
+      var max = L.avail[p.id];
+      var row = document.createElement("div");
+      row.className = "plant" + (max === 0 ? " off" : "");
+      row.innerHTML =
+        '<span class="swatch" style="background:' + p.color + '"></span>' +
+        '<div><div class="pname">' + p.name + '</div><div class="pmeta">$' + p.cost + ' per MWh</div></div>' +
+        '<div><input type="range" min="0" max="' + max + '" step="100" value="' + v[p.id] + '" aria-label="' + p.name + ' megawatts" ' + (max === 0 ? "disabled" : "") + '>' +
+        '<div class="pmeta">' + (max === 0 ? "Not available right now" : "Available: 0 to " + fmt(max) + " MW") + '</div></div>' +
+        '<input type="number" min="0" max="' + max + '" step="100" value="' + v[p.id] + '" aria-label="' + p.name + ' number" ' + (max === 0 ? "disabled" : "") + '>' +
+        '<button type="button" class="btn secondary small" ' + (max === 0 ? "disabled" : "") + ' aria-label="Set ' + p.name + ' to maximum">Max</button>';
+      var range = row.querySelector('input[type="range"]');
+      var num = row.querySelector('input[type="number"]');
+      var maxBtn = row.querySelector("button");
+      function set(val) {
+        val = Math.max(0, Math.min(max, Math.round(Number(val) || 0)));
+        v[p.id] = val; range.value = val; num.value = val; update();
+      }
+      range.addEventListener("input", function () { set(range.value); });
+      num.addEventListener("change", function () { set(num.value); });
+      maxBtn.addEventListener("click", function () { set(max); });
+      els.plants.appendChild(row);
+    });
+  }
+
+  function syncEmergency() {
+    var L = LEVELS[state.level], v = state.vals[state.level];
+    els.emerg.classList.toggle("hidden", !L.emergency);
+    els.imports.value = v.imports; els.importsNum.value = v.imports;
+    els.conserve.checked = v.conserve;
+    els.shed.value = v.shed; els.shedNum.value = v.shed;
+  }
+
+  function update() {
+    var L = LEVELS[state.level], t = totals(state.level), v = state.vals[state.level];
+    els.sDemand.textContent = fmt(t.demand) + " MW" + (t.demand !== L.demand ? " (was " + fmt(L.demand) + ")" : "");
+    els.sSupply.textContent = fmt(t.supply) + " MW";
+    els.sDiff.textContent = (t.diff > 0 ? "+" : "") + fmt(t.diff) + " MW";
+    els.sPrice.textContent = t.price ? "$" + t.price + " per MWh" : "none yet";
+    els.sCost.textContent = money(t.cost);
+    var st = els.status;
+    st.className = "status";
+    if (t.diff === 0) { st.classList.add("ok"); st.textContent = "Balanced! Supply equals demand."; }
+    else if (t.diff < 0) { st.classList.add("low"); st.textContent = "Not enough power: " + fmt(-t.diff) + " MW short."; }
+    else { st.classList.add("high"); st.textContent = "Too much power: " + fmt(t.diff) + " MW extra."; }
+
+    // stacked bar
+    var scale = Math.max(t.demand, t.supply, 1) * 1.08;
+    var html = "";
+    PLANTS.forEach(function (p) { if (v[p.id] > 0) html += '<div class="seg" style="width:' + (v[p.id] / scale * 100) + '%;background:' + p.color + '"></div>'; });
+    if (v.imports > 0) html += '<div class="seg" style="width:' + (v.imports / scale * 100) + '%;background:' + IMPORT.color + '"></div>';
+    els.bar.innerHTML = html + '<div class="demand-mark" style="left:' + (t.demand / scale * 100) + '%"></div>';
+    els.barMax.textContent = fmt(Math.round(scale)) + " MW";
+  }
+
+  function loadLevel() {
+    var L = LEVELS[state.level];
+    els.levelTitle.textContent = "Level " + (state.level + 1) + ": " + L.label + "  \u2022  Demand: " + fmt(L.demand) + " MW";
+    els.levelStory.textContent = L.story;
+    els.resultcard.classList.add("hidden");
+    buildTabs(); buildPlants(); syncEmergency(); update();
+    els.solve.classList.toggle("hidden", !teacher);
+  }
+
+  function goLevel(i) {
+    els.summary.classList.add("hidden");
+    $("play").classList.remove("hidden");
+    state.level = i; loadLevel();
+  }
+
+  /* ---------- checking ---------- */
+  function hintFor(levelIdx) {
+    var L = LEVELS[levelIdx], v = state.vals[levelIdx];
+    var used = PLANTS.filter(function (p) { return v[p.id] > 0; });
+    if (!used.length) return "";
+    var priciest = used.reduce(function (a, b) { return b.cost > a.cost ? b : a; });
+    var cheaperRoom = PLANTS.filter(function (p) { return p.cost < priciest.cost && v[p.id] < L.avail[p.id]; });
+    if (cheaperRoom.length) {
+      var c = cheaperRoom[0];
+      return c.name + " ($" + c.cost + ") still has room, but " + priciest.name + " ($" + priciest.cost + ") is running. Could you use more of the cheaper plant first?";
+    }
+    return "";
+  }
+
+  function check() {
+    var idx = state.level, L = LEVELS[idx], t = totals(idx), v = state.vals[idx], o = optimal(idx);
+    var card = els.resultcard; card.className = "card result";
+    var body = "", title = "";
+    if (t.diff !== 0) {
+      card.classList.add("bad");
+      title = "Not balanced yet";
+      body = "<p>" + (t.diff < 0 ? "You are " + fmt(-t.diff) + " MW short. Turn on more power or lower the demand." : "You have " + fmt(t.diff) + " MW too much. Turn something down.") + "</p>";
+      els.next.classList.add("hidden");
+    } else if (L.emergency) {
+      var best = v.shed === o.shed && v.conserve && v.imports === IMPORT.max;
+      if (best) { title = "Great job. You kept as many customers on as possible."; }
+      else { card.classList.add("warn"); title = "Balanced, but you can do better"; }
+      body = "<p><strong>Customers who lost power:</strong> " + fmt(v.shed) + " MW of demand was cut. The least possible is " + fmt(o.shed) + " MW.</p>" +
+             "<p><strong>Cost per hour:</strong> " + money(t.cost) + "</p>";
+      if (!best) body += "<p>Hint: did you use every plant, bring in the maximum imports, and ask customers to use less before cutting power?</p>";
+      body += "<p>When supply cannot meet demand, operators may have to cut power to some customers on purpose so the whole grid does not fail. This is a small version of what happened in Texas in February 2021, when demand soared in the cold and supply dropped.</p>";
+      state.results[idx] = { label: L.label, demand: L.demand, price: t.price, cost: t.cost, score: best ? "Least outage: " + fmt(v.shed) + " MW" : "Outage: " + fmt(v.shed) + " MW (least is " + fmt(o.shed) + ")" };
+      els.next.classList.add("hidden");
+    } else {
+      var eff = Math.round(o.cost / t.cost * 100);
+      var perfect = t.cost === o.cost;
+      if (perfect) { title = "Perfect! You used the cheapest plants first."; }
+      else { card.classList.add("warn"); title = "Balanced, but it costs more than it needs to"; }
+      body = "<p><strong>Price this hour:</strong> $" + t.price + " per MWh (set by the most expensive plant you used).</p>" +
+             "<p><strong>Your cost:</strong> " + money(t.cost) + " per hour. <strong>Lowest possible:</strong> " + money(o.cost) + " (" + eff + "% efficient).</p>";
+      if (!perfect) { var h = hintFor(idx); if (h) body += "<p>Hint: " + h + "</p>"; }
+      state.results[idx] = { label: L.label, demand: L.demand, price: t.price, cost: t.cost, score: eff + "% efficient" };
+      els.next.classList.remove("hidden");
+    }
+    els.resTitle.textContent = title; els.resBody.innerHTML = body;
+    card.classList.remove("hidden"); buildTabs();
+    if (L.emergency && t.diff === 0) { showSummary(); }
+    else { card.scrollIntoView({ behavior: "smooth", block: "nearest" }); }
+  }
+
+  function showSummary() {
+    var rows = '<tr><th>Level</th><th>Demand (MW)</th><th>Price ($/MWh)</th><th>Cost per hour</th><th>Result</th></tr>';
+    LEVELS.forEach(function (L, i) {
+      var r = state.results[i];
+      rows += "<tr><td>" + (i + 1) + ". " + L.label + "</td>" +
+              (r ? "<td>" + fmt(r.demand) + "</td><td>$" + r.price + "</td><td>" + money(r.cost) + "</td><td>" + r.score + "</td>" : '<td colspan="4">Not finished</td>') + "</tr>";
+    });
+    els.sumTable.innerHTML = rows;
+    var done = state.results.filter(Boolean).length;
+    els.sumNote.textContent = done === LEVELS.length ? "You finished every level. Which times of day had the highest prices, and why?" : "Finish the other levels to complete your results.";
+    els.summary.classList.remove("hidden");
+    els.summary.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function init() {
+    els = {
+      tabs: $("tabs"), levelTitle: $("levelTitle"), levelStory: $("levelStory"), plants: $("plants"), emerg: $("emerg"),
+      imports: $("imports"), importsNum: $("importsNum"), conserve: $("conserve"), shed: $("shed"), shedNum: $("shedNum"),
+      sDemand: $("sDemand"), sSupply: $("sSupply"), sDiff: $("sDiff"), status: $("status"), bar: $("bar"), barMax: $("barMax"),
+      legend: $("legend"), sPrice: $("sPrice"), sCost: $("sCost"), check: $("check"), reset: $("reset"), solve: $("solve"),
+      resultcard: $("resultcard"), resTitle: $("resTitle"), resBody: $("resBody"), next: $("next"),
+      summary: $("summary"), sumTable: $("sumTable"), sumNote: $("sumNote")
+    };
+    state = freshState();
+    buildLegend();
+
+    els.check.addEventListener("click", check);
+    els.reset.addEventListener("click", function () {
+      var v = state.vals[state.level];
+      PLANTS.forEach(function (p) { v[p.id] = 0; }); v.imports = 0; v.conserve = false; v.shed = 0;
+      loadLevel();
+    });
+    els.solve.addEventListener("click", function () {
+      var o = optimal(state.level), v = state.vals[state.level];
+      PLANTS.forEach(function (p) { v[p.id] = o.plan[p.id] || 0; });
+      v.imports = o.plan.imports || 0; v.conserve = !!o.plan.conserve; v.shed = o.plan.shed || 0;
+      buildPlants(); syncEmergency(); update();
+    });
+    els.next.addEventListener("click", function () {
+      if (state.level < LEVELS.length - 1) goLevel(state.level + 1);
+    });
+    $("print").addEventListener("click", function () { window.print(); });
+    $("again").addEventListener("click", function () { state = freshState(); goLevel(0); });
+
+    function setImports(val) {
+      val = Math.max(0, Math.min(IMPORT.max, Math.round(Number(val) || 0)));
+      state.vals[state.level].imports = val; els.imports.value = val; els.importsNum.value = val; update();
+    }
+    els.imports.addEventListener("input", function () { setImports(els.imports.value); });
+    els.importsNum.addEventListener("change", function () { setImports(els.importsNum.value); });
+    els.conserve.addEventListener("change", function () { state.vals[state.level].conserve = els.conserve.checked; update(); });
+    function setShed(val) {
+      val = Math.max(0, Math.min(6000, Math.round(Number(val) || 0)));
+      state.vals[state.level].shed = val; els.shed.value = val; els.shedNum.value = val; update();
+    }
+    els.shed.addEventListener("input", function () { setShed(els.shed.value); });
+    els.shedNum.addEventListener("change", function () { setShed(els.shedNum.value); });
+
+    loadLevel();
+  }
+
+  document.addEventListener("DOMContentLoaded", init);
+})();
+</script>
+</body>
+</html>
